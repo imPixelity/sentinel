@@ -5,7 +5,7 @@ Sentinel is a hobby project that I made out of my curiosity of concurrency. :)
 ### Diagram
 
 <div align="center">
-  ![diagram](diagram.svg)
+  <img src="diagram.svg" alt="diagram">
 </div>
 
 ### Result
