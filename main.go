@@ -17,6 +17,13 @@ type LogEntry struct {
 	Attrs     map[string]any `json:"details"`
 }
 
+type HealthSummary struct {
+	TotalRequests  int
+	FailedRequests int
+	Warns          int
+	Errors         int
+}
+
 func main() {
 	errCh := make(chan error, 1)
 	wg := &sync.WaitGroup{}
@@ -37,20 +44,25 @@ func main() {
 	wg.Add(1)
 	mergedPipeline := mergePipeline(wg, filtererX, filtererY, filtererZ)
 
+	wg.Add(1)
+	aggregator := aggregateLog(errCh, wg, mergedPipeline)
+
+	wg.Go(func() {
+		for data := range aggregator {
+			fmt.Printf("HTTP failed request rate: %d/%d\n", data.FailedRequests, data.TotalRequests)
+			fmt.Printf("Warns: %d\n", data.Warns)
+			fmt.Printf("Errors: %d\n", data.Errors)
+		}
+	})
+
 	go func() {
-		for data := range mergedPipeline {
-			fmt.Println(data)
+		for err := range errCh {
+			log.Fatalf("error %v:", err)
 		}
 	}()
 
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
-
-	for err := range errCh {
-		log.Fatalf("error %v:", err)
-	}
+	wg.Wait()
+	close(errCh)
 }
 
 func ingestLog(errCh chan<- error, wg *sync.WaitGroup) <-chan string {
@@ -146,6 +158,44 @@ func mergePipeline(wg *sync.WaitGroup, ins ...<-chan LogEntry) <-chan LogEntry {
 		defer close(out)
 		wgM.Wait()
 		wg.Done()
+	}()
+
+	return out
+}
+
+func aggregateLog(errCh chan<- error, wg *sync.WaitGroup, in <-chan LogEntry) <-chan HealthSummary {
+	out := make(chan HealthSummary)
+	healthSummary := HealthSummary{}
+
+	go func() {
+		defer close(out)
+		defer wg.Done()
+		for logEntry := range in {
+			switch logEntry.Level {
+			case "WARN":
+				healthSummary.Warns++
+			case "ERROR":
+				healthSummary.Errors++
+			case "INFO":
+				healthSummary.TotalRequests++
+				raw, ok := logEntry.Attrs["status"]
+				if !ok {
+					errCh <- fmt.Errorf("missing required status: %v", logEntry)
+					continue
+				}
+
+				status, ok := raw.(float64)
+				if !ok {
+					errCh <- fmt.Errorf("failed to type assert status: %v", status)
+					continue
+				}
+
+				if int(status) >= 400 {
+					healthSummary.FailedRequests++
+				}
+			}
+		}
+		out <- healthSummary
 	}()
 
 	return out
