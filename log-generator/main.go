@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-const logCount = 1000
+const logCount = 1_000_000
 
 type LogEntry struct {
 	Level   string
@@ -53,6 +53,30 @@ func main() {
 		}},
 		{"info", "user logout", map[string]any{
 			"user_id": "u_456",
+		}},
+		{"info", "http request", map[string]any{
+			"method":      "GET",
+			"path":        "/api/orders",
+			"status":      500,
+			"duration_ms": 842,
+		}},
+		{"info", "http request", map[string]any{
+			"method":      "GET",
+			"path":        "/api/products/999",
+			"status":      404,
+			"duration_ms": 45,
+		}},
+		{"info", "http request", map[string]any{
+			"method":      "POST",
+			"path":        "/api/payment",
+			"status":      504,
+			"duration_ms": 3000,
+		}},
+		{"info", "http request", map[string]any{
+			"method":      "GET",
+			"path":        "/api/profile",
+			"status":      401,
+			"duration_ms": 12,
 		}},
 		{"warn", "slow query", map[string]any{
 			"duration_ms": 1500,
