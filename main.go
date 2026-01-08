@@ -45,6 +45,7 @@ func ingestLog(errCh chan<- error, wg *sync.WaitGroup) <-chan string {
 
 	go func() {
 		defer close(out)
+		defer wg.Done()
 		file, err := os.Open("log.txt")
 		if err != nil {
 			errCh <- fmt.Errorf("failed to open file %s: %w", file.Name(), err)
@@ -60,8 +61,6 @@ func ingestLog(errCh chan<- error, wg *sync.WaitGroup) <-chan string {
 		if err := scanner.Err(); err != nil {
 			errCh <- fmt.Errorf("failed to scan: %w", err)
 		}
-
-		wg.Done()
 	}()
 
 	return out
@@ -72,6 +71,7 @@ func parseLog(errCh chan<- error, in <-chan string, wg *sync.WaitGroup, ctr *int
 
 	go func() {
 		defer close(out)
+		defer wg.Done()
 		for log := range in {
 			logEntry := LogEntry{}
 			if err := json.Unmarshal([]byte(log), &logEntry); err != nil {
@@ -81,7 +81,6 @@ func parseLog(errCh chan<- error, in <-chan string, wg *sync.WaitGroup, ctr *int
 			atomic.AddInt32(ctr, 1)
 			fmt.Println(logEntry)
 		}
-		wg.Done()
 	}()
 
 	return out
