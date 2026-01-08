@@ -87,13 +87,13 @@ func main() {
 
 		switch entry.Level {
 		case "debug":
-			logger.Debug(entry.Message, attrs...)
+			logger.Debug(entry.Message, slog.Group("details", attrs...))
 		case "info":
-			logger.Info(entry.Message, attrs...)
+			logger.Info(entry.Message, slog.Group("details", attrs...))
 		case "warn":
-			logger.Warn(entry.Message, attrs...)
+			logger.Warn(entry.Message, slog.Group("details", attrs...))
 		case "error":
-			logger.Error(entry.Message, attrs...)
+			logger.Error(entry.Message, slog.Group("details", attrs...))
 		}
 	}
 }
