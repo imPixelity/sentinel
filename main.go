@@ -25,41 +25,53 @@ type HealthSummary struct {
 }
 
 func main() {
+	start := time.Now()
 	errCh := make(chan error, 1)
 	wg := &sync.WaitGroup{}
-
-	wg.Add(1)
-	ingestor := ingestLog(errCh, wg)
-
-	wg.Add(3)
-	parserX := parseLog(errCh, wg, ingestor)
-	parserY := parseLog(errCh, wg, ingestor)
-	parserZ := parseLog(errCh, wg, ingestor)
-
-	wg.Add(3)
-	filtererX := filterLog(wg, parserX)
-	filtererY := filterLog(wg, parserY)
-	filtererZ := filterLog(wg, parserZ)
-
-	wg.Add(1)
-	mergedPipeline := mergePipeline(wg, filtererX, filtererY, filtererZ)
-
-	wg.Add(1)
-	aggregator := aggregateLog(errCh, wg, mergedPipeline)
-
-	wg.Go(func() {
-		for data := range aggregator {
-			fmt.Printf("HTTP failed request rate: %d/%d\n", data.FailedRequests, data.TotalRequests)
-			fmt.Printf("Warns: %d\n", data.Warns)
-			fmt.Printf("Errors: %d\n", data.Errors)
-		}
-	})
 
 	go func() {
 		for err := range errCh {
 			log.Fatalf("error %v:", err)
 		}
 	}()
+
+	wg.Add(1)
+	ingestor := ingestLog(errCh, wg)
+
+	wg.Add(10)
+	parser1 := parseLog(errCh, wg, ingestor)
+	parser2 := parseLog(errCh, wg, ingestor)
+	parser3 := parseLog(errCh, wg, ingestor)
+	parser4 := parseLog(errCh, wg, ingestor)
+	parser5 := parseLog(errCh, wg, ingestor)
+	parser6 := parseLog(errCh, wg, ingestor)
+	parser7 := parseLog(errCh, wg, ingestor)
+	parser8 := parseLog(errCh, wg, ingestor)
+	parser9 := parseLog(errCh, wg, ingestor)
+	parser10 := parseLog(errCh, wg, ingestor)
+
+	wg.Add(10)
+	filterer1 := filterLog(wg, parser1)
+	filterer2 := filterLog(wg, parser2)
+	filterer3 := filterLog(wg, parser3)
+	filterer4 := filterLog(wg, parser4)
+	filterer5 := filterLog(wg, parser5)
+	filterer6 := filterLog(wg, parser6)
+	filterer7 := filterLog(wg, parser7)
+	filterer8 := filterLog(wg, parser8)
+	filterer9 := filterLog(wg, parser9)
+	filterer10 := filterLog(wg, parser10)
+
+	filterers := []<-chan LogEntry{filterer1, filterer2, filterer3, filterer4, filterer5, filterer6, filterer7, filterer8, filterer9, filterer10}
+
+	wg.Add(1)
+	mergedPipeline := mergePipeline(wg, filterers...)
+
+	wg.Add(1)
+	aggregator := aggregateLog(errCh, wg, mergedPipeline)
+
+	reportLog(aggregator)
+	fmt.Printf("\nlogging done in %v\n", time.Since(start))
 
 	wg.Wait()
 	close(errCh)
@@ -199,4 +211,13 @@ func aggregateLog(errCh chan<- error, wg *sync.WaitGroup, in <-chan LogEntry) <-
 	}()
 
 	return out
+}
+
+func reportLog(in <-chan HealthSummary) {
+	for summary := range in {
+		rate := float64(summary.FailedRequests) / float64(summary.TotalRequests) * 100
+		fmt.Printf("HTTP failed request rate: %.2f%%\n", rate)
+		fmt.Printf("Total warn level: %d\n", summary.Warns)
+		fmt.Printf("Total error level: %d\n", summary.Errors)
+	}
 }
