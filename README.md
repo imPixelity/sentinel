@@ -23,17 +23,17 @@ This was done with 1 ingestor, 10 parsers, 10 filterers, and 1 aggregator with 1
 ### Pipeline Stages
 
 1. Ingest
-  - Reads log file line by line
-2. Parse
-  - Unmarshals JSON log entries in parallel
+   Reads log file line by line
+3. Parse
+   Unmarshals JSON log entries in parallel
 3. Filter
-  - Keeps only relevant entries (WARN, ERROR, and HTTP requests)
+   Keeps only relevant entries (WARN, ERROR, and HTTP requests)
 4. Merge
-  - Combines output from all filter workers into a single channel
+   Combines output from all filter workers into a single channel
 5. Aggregate
-  - Calculates health metrics
+   Calculates health metrics
 6. Report
-  - Display final statistics
+   Display final statistics
 
 ### Concurrency Model
 
